@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "jap2eng"
+name = "encdec"
 version = "0.1.0"
 
 [tool.setuptools]

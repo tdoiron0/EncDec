@@ -12,6 +12,7 @@ runs/
 
 # Env
 .env
+.vscode
 
 **/data-raw/**
 **/data-processed/**
