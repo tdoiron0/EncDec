@@ -71,6 +71,9 @@ class Trainer:
         
         use_amp = self.device == "cuda"
 
+        amp_dtype = torch.float16
+        self.scaler = torch.amp.GradScaler("cuda", enabled=use_amp and amp_dtype == torch.float16)
+
         if getattr(config, "compile", False) and self.device == "cuda":
             model = torch.compile(model)
 
@@ -91,13 +94,15 @@ class Trainer:
                 batch = [t.to(self.device) for t in batch]
                 src, tgt = batch
 
-                with torch.autocast(device_type="cuda", dtype=torch.bfloat16, enabled=use_amp):
+                # in the batch loop:
+                with torch.autocast(device_type="cuda", dtype=amp_dtype, enabled=use_amp):
                     logits, self.loss = model(src, tgt)
-                
-                self.loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_norm_clip)
 
-                self.optimizer.step()
+                self.scaler.scale(self.loss).backward()
+                self.scaler.unscale_(self.optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_norm_clip)
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
                 self.scheduler.step()
 
                 self.iter_num += 1

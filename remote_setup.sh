@@ -27,7 +27,7 @@ SERVER_INSTALL_PATH="/workspace"
 TEMP_KEY_DESC="temp-clone-key"
 TEMP_KEY_FILENAME="temp-key"
 REPO_OWNER="tdoiron0"
-REPO="CS-4644"
+REPO="EncDec"
 DEPLOY_KEY_ID=""
 
 cleanup() {
@@ -84,10 +84,10 @@ zip tokenizers.zip *.model *.vocab
 cd ".."
 
 echo "Uploading local datasets"
-scp -i "$SERVER_SSH_PEM_PATH" -P "$SERVER_PORT" "src/datasets/data-processed.zip" "$SERVER:$SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/src/datasets"
+scp -i "$SERVER_SSH_PEM_PATH" -P "$SERVER_PORT" "src/datasets/data-processed.zip" "$SERVER:$SERVER_INSTALL_PATH/$REPO/src/datasets"
 
 echo "Uploading local tokenizers"
-scp -i "$SERVER_SSH_PEM_PATH" -P "$SERVER_PORT" "tokenizers/tokenizers.zip" "$SERVER:$SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng"
+scp -i "$SERVER_SSH_PEM_PATH" -P "$SERVER_PORT" "tokenizers/tokenizers.zip" "$SERVER:$SERVER_INSTALL_PATH/$REPO"
 
 echo "Installing system packages on server"
 ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" 'bash -s' <<'REMOTE'
@@ -99,12 +99,12 @@ apt-get install -y -qq zip unzip curl git
 REMOTE
 
 echo "Unzipping server datasets"
-ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "unzip $SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/src/datasets/data-processed.zip -d $SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/src/datasets"
-ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "rm -rf $SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/src/datasets/data-processed.zip"
+ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "unzip $SERVER_INSTALL_PATH/$REPO/src/datasets/data-processed.zip -d $SERVER_INSTALL_PATH/$REPO/src/datasets"
+ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "rm -rf $SERVER_INSTALL_PATH/$REPO/src/datasets/data-processed.zip"
 
 echo "Unzipping server tokenizers"
-ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "unzip $SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/tokenizers.zip -d $SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/tokenizers"
-ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "rm -rf $SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/tokenizers.zip"
+ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "unzip $SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/tokenizers.zip -d $SERVER_INSTALL_PATH/$REPO/tokenizers"
+ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "rm -rf $SERVER_INSTALL_PATH/$REPO/tokenizers.zip"
 
 echo "Installing Miniconda on server"
 ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" 'bash -s' <<'REMOTE'
@@ -139,10 +139,10 @@ source "/root/miniconda3/etc/profile.d/conda.sh"
 
 conda activate base
 
-pip install -r "$SERVER_INSTALL_PATH/$REPO/Models/Jap2Eng/requirements.txt"
+pip install -r "$SERVER_INSTALL_PATH/$REPO/requirements.txt"
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 REMOTE
 
-ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "cd /workspace/CS-4644/Models/Jap2Eng"
+ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "cd $SERVER_INSTALL_PATH/$REPO"
 ssh -i "$SERVER_SSH_PEM_PATH" -p "$SERVER_PORT" "$SERVER" "pip install -e ."
