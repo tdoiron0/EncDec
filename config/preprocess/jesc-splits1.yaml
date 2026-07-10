@@ -1,0 +1,3 @@
+raw_dir: "JESC-split"
+out_dir: "JESC-split-tokens"
+tokenizer: "jesc-1"

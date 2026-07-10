@@ -1,0 +1,6 @@
+Daily Summary:
+-Created ec2 stack yaml template
+-Start remote_setup.sh script
+
+Lessons Learned:
+-Need faster research/learning method

@@ -1,0 +1,8 @@
+torch
+jaxtyping
+sentencepiece
+numpy
+sacrebleu
+datasets
+matplotlib
+PyYAML

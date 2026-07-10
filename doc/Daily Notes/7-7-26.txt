@@ -1,0 +1,6 @@
+Lessons Learned:
+- Push responsibility of specifiying filepath to function caller rather then the function itself
+    - Do: 
+    config = load_config(os.path.join(TRAINING_CONFIG_PATH, f"{args.config}"))
+    - Do Not: 
+    config = load_config(args.config)

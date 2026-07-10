@@ -1,0 +1,13 @@
+raws: 
+  - "jesc-train"
+out_name: "jesc-1"
+tokenizer_prefix: "jesc_sp"
+vocab_size: 32000
+character_coverage: 0.9995
+model_type: "bpe"
+unk_id: 0
+bos_id: 1
+eos_id: 2
+pad_id: 3
+input_sentence_size: 4000000
+shuffle_input_sentence: True

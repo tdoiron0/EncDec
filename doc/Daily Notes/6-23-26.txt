@@ -1,0 +1,11 @@
+Daily Summary:
+-Looked into cloud computing for training
+-Tried DeployGPU but didn't work (bad ssh credentials)
+-Actually deployed and trained (1 epoch) on H100 through runpod
+
+Lessons Learned:
+-Setup scripts to reduce setup time
+-Resolve 25ms/iter bottleneck 
+-Develop plan for scaling model
+-Increase dataset size
+-Decide if want new model

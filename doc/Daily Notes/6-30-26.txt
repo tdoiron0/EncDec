@@ -1,0 +1,17 @@
+Lessons Learned:
+-New way to execute blocks of commands through ssh
+-Need more metrics to predict how long it takes to train model
+-Better scripting for deployment
+-Need better debug process 
+    -Cider broke, then chrome broke
+    -Was able to use claude to fix but took time to realize 
+    -Better process is either 
+        1. Already know solution 
+        2. Take second to analyze situation and decide what to do next
+
+-After training: 
+    -enc-dec-6 did better than ever but performance still dissapointing 
+    -try with german to english task to compare to "Attention is All You Need"
+    -might need LLM to get performance I want 
+
+-make sure model is usable (design generate() function before start training)

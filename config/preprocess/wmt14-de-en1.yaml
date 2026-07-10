@@ -1,0 +1,6 @@
+raw_dir: "wmt14-de-en"
+out_dir: "wmt14-de-en-tokens"
+tokenizer: "wmt14-1"
+# Drop pairs whose framed src or tgt ([BOS] + tokens + [EOS]) is longer than this.
+# At 128 this loses ~0.5% of WMT14 train pairs and bounds block_size for the model.
+max_seq_len: 128

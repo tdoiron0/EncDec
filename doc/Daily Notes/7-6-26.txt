@@ -1,0 +1,29 @@
+TODO:
+- Add git commit hash to run dirs
+- Look into using weights and biases website
+- Look into TorchScript
+
+- Web API and website sounds cool 
+- Says JP when training on DE in evaluation script
+- Not saving train config to run dirs
+
+- Make german to english model into something I can show off
+- Diagrams for each of the components 
+    - Generic self attention layer 
+    - Encoder block 
+    - Decoder block 
+    - Encoder-Decoder model 
+    - Encoder-Decoder model in training 
+    - Encoder-Decoder model in inference
+
+- Need to separate train config from model config files 
+    - At deploy time, I can load model from dedicated config
+
+- remote_setup.sh script needs
+    - copy tokenizers with datasets
+    - add git pull permissions
+
+Lessons Learned:
+- Spending lots on compute compared to what I get out of it
+    - Maybe buy V100 setup
+    - Focus on smaller models which I can learn more from

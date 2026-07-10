@@ -1,0 +1,18 @@
+# Package metadata (editable install artifact)
+*.egg-info/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Training artifacts
+checkpoints/
+runs/
+*.log
+
+# Env
+.env
+
+**/data-raw/**
+**/data-processed/**
+**/tokenizers/**

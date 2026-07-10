@@ -1,0 +1,13 @@
+1. Main training loop 
+    1. Init logger
+    2. Load config file
+    3. Create model 
+    4. Train model 
+        1. Load dataset
+        2. Create logging function to hand to trainer
+            1. Log metrics 
+            2. Save checkpoint at checkpoint 
+        3. Create val function to hand to trainer 
+        4. Create trainer 
+        5. trainer.run()
+    5. Save final checkpoint 

@@ -1,0 +1,37 @@
+pod setup (TODO):
+1. clone repo
+	1. zip ssh key pair 
+	2. upload zipped file
+	3. unzip ssh key pair
+	4. git clone script using ssh key pair
+2. upload data dir
+	1. zip local dataset
+	2. upload script
+	3. unzip in datasets dir script
+3. install requirements
+	1. consolidate list of dependencies 
+	2. "pip install -r requirements.txt" script
+4. run model
+	1. run train.py with chosen config file
+	2. wait for script to finish
+5. download results
+	1. zip run folder
+	2. download zipped run folder 
+
+Plan:
+-1 script file to:
+	1. generate new ssh key pair and register with github
+	2. push ssh key pairs to server
+	3. push data dir to server
+	4. ssh into server
+	5. install sudo
+	6. install ssh key pair
+	7. clone repo
+	8. move data dir
+	9. install requirements
+	10. run model
+	11. zip results
+	12. exit ssh
+	13. pull results to local
+	14. ssh into server
+	15. cleanup 

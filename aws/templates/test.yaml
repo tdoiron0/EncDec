@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: My first CloudFormation stack
+
+Resources:
+  MyBucket:
+    Type: AWS::S3::Bucket
+
+# usage: aws cloudformation deploy --template-file template.yaml --stack-name my-first-stack
+# see resources: aws cloudformation list-stack-resources --stack-name my-first-stack
+# cleanup: aws cloudformation delete-stack --stack-name my-first-stack
+
+# use YAML files when making simple stacks and no logic
+# use typscript when making large complex stacks

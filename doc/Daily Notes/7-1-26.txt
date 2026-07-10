@@ -1,0 +1,23 @@
+Lessons Learned:
+- Don't jump to conclusions about needing to rewrite everything just because of a small issue 
+- Take what exists and analyze what needs to change and what can be better
+    - Wanted to rewrite train.py and evaluate.py 
+    - Really just need to re-read and make small changes 
+
+- Daily notes have been helping 
+
+TODO:
+- Work on smoothly adding new datasets
+- Still need way to reliably load models from files 
+    - If I change achitecture a little then previous saves do not count 
+    - Almost need to keep copy of code with parameter saves
+- I think if I can make previous 2 changes than I can take more advantage of processing power
+  and continuously improve model 
+    - More time at 100% GPU utilization means better models 
+    - Time not at 100% GPU utilization is wasted time 
+
+- Do full training run of german to english to get baseline to compare to "Attention is All You Need"
+
+Daily Summary:
+- Integrated new german to english dataset 
+- Trained on H100 on new german to english dataset

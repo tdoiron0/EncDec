@@ -1,0 +1,30 @@
+Summary:
+- Made Tokenizer class and tokenization pipeline
+
+TODO:
+- Beam search rather than greedy for inference 
+- Add git commit hash to run dirs
+- Look into using weights and biases website
+- Look into TorchScript
+
+- Load model from files
+- Figure out how to use model 
+    - Start with simple script 
+    - Web API and website sounds cool 
+- Says JP when training on DE in evaluation script
+- Not saving train config to run dirs
+- Add time "[elapsed]/[remaining]" logging to train.py 
+- Measure samples/s rather than time per iter in train.py logging 
+
+- Make german to english model into something I can show off
+- Diagrams for each of the components 
+    - Generic self attention layer 
+    - Encoder block 
+    - Decoder block 
+    - Encoder-Decoder model 
+    - Encoder-Decoder model in training 
+    - Encoder-Decoder model in inference
+
+- New Tokenizer class needs to be wired into current pipeline 
+- Need to separate train config from model config files 
+    - At deploy time, I can load model from dedicated config
