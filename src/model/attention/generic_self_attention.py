@@ -49,11 +49,13 @@ class GenericSelfAttention(nn.Module):
             query=q,
             key=k,
             value=v,
-            attn_mask=(attention_mask == 0),
+            # SDPA bool mask semantics: True = attend, so valid (nonzero) positions
+            attn_mask=(attention_mask != 0),
             dropout_p=self.dropout_p if self.training else 0.0,
             is_causal=False
         )
 
         y = attn.transpose(1, 2).contiguous().view(B, T, C)
+        y = self.out_proj(y)
 
         return y
