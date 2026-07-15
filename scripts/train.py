@@ -7,6 +7,7 @@ import yaml
 import shutil
 from dataclasses import dataclass, asdict
 from typing import List, Callable
+from git import Repo
 
 import torch
 from torch import nn
@@ -185,6 +186,10 @@ def main():
     setup_logging(RUN_DIR)
     logger = logging.getLogger(__name__)
     logger.info("Starting transformer training script")
+
+    repo = Repo(search_parent_directories=True)
+    git_hash = repo.head.object.hexsha
+    logger.info(f"Git commit hash: {git_hash}")
 
     # Load configuration
     logger.info(f"Training configuration loaded")

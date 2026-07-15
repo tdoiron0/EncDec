@@ -6,3 +6,4 @@ sacrebleu
 datasets
 matplotlib
 PyYAML
+GitPython
