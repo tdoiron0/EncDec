@@ -1,0 +1,10 @@
+ToDo;
+- Add train config fields for 
+    - Model
+    - Trainer
+    - Scheduler
+    - Optimizer
+    - Metrics 
+- Keep trainer, train, model configs separate
+- Metric gathering during training 
+    - Automatic evaluation at end of training

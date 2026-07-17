@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 import torch
 import sys, os
 
-from constants.constants import WMT14_PROC_PATH, PAD_TOKEN
+from constants import WMT14_TOK_DIR, PAD_TOKEN
 
 class WMT14Dataset(Dataset):
     """Prefix-LM dataset for Japanese -> English translation.
@@ -17,7 +17,7 @@ class WMT14Dataset(Dataset):
     (the model's ignore_index), so the Japanese prefix is read but not predicted.
     """
 
-    DATA_DIR = WMT14_PROC_PATH
+    DATA_DIR = WMT14_TOK_DIR
 
     def __init__(self, split: str, block_size: int):
         assert split in {"train", "validation", "test"}

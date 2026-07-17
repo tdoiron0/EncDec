@@ -4,19 +4,23 @@ from pprint import pprint
 
 from src.model.enc_dec import EncoderDecoder
 from src.tokenizer.tokenizer import Tokenizer
-from constants.constants import TOKENIZERS_PATH
+from constants import TOKENIZERS_PATH, RUNS_PATH
+from utils import load_config
 
+run_path = os.path.join(RUNS_PATH, "de-en-medium-2")
 
-checkpoint_path = "/home/trent/CodeProjects/CS-4644/Models/Jap2Eng/runs/de-en-medium-2/checkpoints/checkpoint_epoch_4_iter_17524.pt"
+checkpoint_path = os.path.join(run_path, "checkpoints", "checkpoint_epoch_1_iter_17524.pt")
 checkpoint = torch.load(checkpoint_path, weights_only=False, map_location="cpu")
 
-model = EncoderDecoder(checkpoint["config"])
-tokenizer = Tokenizer.load(os.path.join(TOKENIZERS_PATH, "wmt14-1.model"))
+config = load_config(os.path.join(run_path, "train_config.yaml"))
+tokenizer = Tokenizer.load(os.path.join(run_path, "tokenizer.model"))
+config.vocab_size = tokenizer.vocab_size()
+pprint(config)
 
-pprint(checkpoint["config"])
+model = EncoderDecoder(config)
 
 # Gutach: Increased safety for pedestrians
-src = "Bekannt ist der Büchner-Preisträger vor allem als Prosaautor, Theatertexte sind in seinem Werk rar."
+src = "Eine Blackbox im Auto?"
 print(list(zip(tokenizer.encode(src, out_type=str), tokenizer.encode(src, out_type=int))))
 src_ids = [tokenizer.bos_id()] + tokenizer.encode(src) + [tokenizer.eos_id()]
 src = torch.tensor([src_ids], dtype=torch.long)

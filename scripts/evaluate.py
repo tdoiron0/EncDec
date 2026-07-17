@@ -12,8 +12,8 @@ from sacrebleu.metrics import BLEU, CHRF
 
 from src.model.enc_dec import EncoderDecoder
 from src.tokenizer.tokenizer import Tokenizer
-from constants.constants import PROJECT_ROOT, PAD_TOKEN
-from constants.data_index import DATASET_INDEX
+from constants import PROJECT_ROOT, PAD_TOKEN
+from index import DATASET_INDEX
 
 from utils import get_best_device, load_config
 

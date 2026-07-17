@@ -5,7 +5,7 @@ import torch
 import shutil
 from pprint import pprint
 
-from constants.constants import WMT14_PROC_PATH, WMT14_RAW_DIR, PREPROCESS_CONFIG_PATH, TOKENIZERS_PATH
+from constants import WMT14_TOK_DIR, WMT14_RAW_DIR, PREPROCESS_CONFIG_PATH, TOKENIZERS_PATH
 from src.tokenizer.tokenizer import Tokenizer
 from utils import load_config
 
@@ -67,7 +67,7 @@ def tokenize_dataset(config) -> int:
             "src_offsets": torch.tensor(src_offsets, dtype=torch.int64),
             "tgt_offsets": torch.tensor(tgt_offsets, dtype=torch.int64)
         }
-        torch.save(pairs, os.path.join(WMT14_PROC_PATH, f"{split}.pt"))
+        torch.save(pairs, os.path.join(WMT14_TOK_DIR, f"{split}.pt"))
 
     return block_size
 
@@ -83,9 +83,9 @@ def main():
     print(f"Loaded config file: {args.config}")
     pprint(config)
     
-    if os.path.isdir(WMT14_PROC_PATH):
-        shutil.rmtree(WMT14_PROC_PATH)
-    os.makedirs(WMT14_PROC_PATH, exist_ok=True)
+    if os.path.isdir(WMT14_TOK_DIR):
+        shutil.rmtree(WMT14_TOK_DIR)
+    os.makedirs(WMT14_TOK_DIR, exist_ok=True)
 
     block_size = tokenize_dataset(config)
     print(f"block_size (max sequence length across all splits): {block_size}")
@@ -94,11 +94,11 @@ def main():
     with open(config_filepath, "r") as f:
         config_raw = yaml.safe_load(f)
     config_raw["block_size"] = block_size
-    with open(os.path.join(WMT14_PROC_PATH, "config.yaml"), "w") as f:
+    with open(os.path.join(WMT14_TOK_DIR, "config.yaml"), "w") as f:
         yaml.dump(config_raw, f, allow_unicode=True)
     
     # Copy the tokenizer model to processed dataset directory
-    shutil.copy(get_tokenizer_filepath(config), os.path.join(WMT14_PROC_PATH, "tokenizer.model"))
+    shutil.copy(get_tokenizer_filepath(config), os.path.join(WMT14_TOK_DIR, "tokenizer.model"))
 
 if __name__ == "__main__":
     main()

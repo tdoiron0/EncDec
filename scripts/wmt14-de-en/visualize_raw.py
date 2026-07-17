@@ -1,6 +1,6 @@
 import os
 
-from constants.constants import WMT14_RAW_DIR
+from constants import WMT14_RAW_DIR
 
 split = 'test'
 

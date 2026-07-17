@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import LinearLR, CosineAnnealingLR, SequentialLR
 from src.datasets.bucket_sampler import BucketBatchSampler, pad_collate
 
 from utils import get_best_device
-from constants.constants import PAD_TOKEN
+from constants import PAD_TOKEN
 
 class Trainer:
     def __init__(

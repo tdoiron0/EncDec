@@ -39,7 +39,7 @@ def format_review(row):
         "text": f"{row['translation']['eng']}[SEP]{row['translation']['engyay']}[END]"
     }
 
-def load_config(filename):
+def load_config(filepath):
     def to_namespace(data):
         if isinstance(data, dict):
             return SimpleNamespace(
@@ -48,6 +48,42 @@ def load_config(filename):
         elif isinstance(data, list):
             return [to_namespace(item) for item in data]
         return data
-    with open(filename, "r") as f:
+    with open(filepath, "r") as f:
         data = yaml.safe_load(f)
     return to_namespace(data)
+
+from argparse import Namespace
+
+def namespace_to_dict(obj):
+    if hasattr(obj, "__dict__"):
+        return {
+            k: namespace_to_dict(v)
+            for k, v in vars(obj).items()
+        }
+    elif isinstance(obj, dict):
+        return {
+            k: namespace_to_dict(v)
+            for k, v in obj.items()
+        }
+    elif isinstance(obj, list):
+        return [namespace_to_dict(v) for v in obj]
+    elif isinstance(obj, tuple):
+        return tuple(namespace_to_dict(v) for v in obj)
+    elif isinstance(obj, set):
+        return {namespace_to_dict(v) for v in obj}
+    else:
+        return obj
+    
+def resolve(x: str, attempts: list[str], isfile: bool = True) -> str:
+    if isfile:
+        filepath = None
+        for it in attempts:
+            if os.path.isfile(it):
+                return filepath
+        return None
+    else:
+        dir = None
+        for it in attempts:
+            if os.path.isdir(it):
+                return dir
+        return None

@@ -1,6 +1,6 @@
 import os
 
-from constants.constants import WMT14_RAW_DIR, WMT14_CORPUS_NAME, CORPORA_PATH
+from constants import WMT14_RAW_DIR, WMT14_CORPUS_NAME, CORPORA_PATH
 
 outfile = os.path.join(CORPORA_PATH, WMT14_CORPUS_NAME)
 os.makedirs(CORPORA_PATH, exist_ok=True)

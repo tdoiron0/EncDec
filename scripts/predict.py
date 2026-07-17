@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 from utils import load_config
-from constants.constants import DATASET_PATHS, TRAINING_CONFIG_PATH
+from constants import DATASET_DIRS, TRAIN_CONFIGS_PATH
 
 from src.tokenizer.tokenizer import Tokenizer
 from src.model.enc_dec import EncoderDecoder
@@ -19,14 +19,14 @@ def load_config_from_args():
 
     # load the training config file
     global CONFIG_FILEPATH
-    CONFIG_FILEPATH = os.path.join(TRAINING_CONFIG_PATH, f"{args.config}")
+    CONFIG_FILEPATH = os.path.join(TRAIN_CONFIGS_PATH, f"{args.config}")
     config = load_config(CONFIG_FILEPATH)
 
     # load vocab_size from the tokenizer associated with the dataset specified by the training config file
-    config.vocab_size = Tokenizer.load(os.path.join(DATASET_PATHS[config.dataset], "tokenizer.model")).vocab_size()
+    config.vocab_size = Tokenizer.load(os.path.join(DATASET_DIRS[config.dataset], "tokenizer.model")).vocab_size()
 
     # load block_size from the config file associated with the dataset specified by the training config file 
-    ds_conf_path = os.path.join(DATASET_PATHS[config.dataset], "config.yaml")
+    ds_conf_path = os.path.join(DATASET_DIRS[config.dataset], "config.yaml")
     ds_conf = load_config(ds_conf_path)
     config.block_size = ds_conf.block_size
 

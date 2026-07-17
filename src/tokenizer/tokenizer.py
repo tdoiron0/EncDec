@@ -3,7 +3,7 @@ import sentencepiece as spm
 from dataclasses import dataclass
 import json
 
-from constants.constants import TOKENIZER_CONFIG_PATH, PROJECT_ROOT, TOKENIZERS_PATH, CORPORA_PATH
+from constants import TOKENIZER_CONFIG_PATH, PROJECT_ROOT, TOKENIZERS_PATH, CORPORA_PATH
 from utils import load_config
 
 class Tokenizer:

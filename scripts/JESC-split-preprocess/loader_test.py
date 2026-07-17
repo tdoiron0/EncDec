@@ -6,7 +6,7 @@ import sys
 
 from src.datasets.JESC_dataset import JESCDataset
 from src.datasets.bucket_sampler import pad_collate
-from constants.constants import PAD_TOKEN
+from constants import PAD_TOKEN
 
 BATCH_SIZE = 16
 NUM_WORKERS = 0

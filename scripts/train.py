@@ -1,49 +1,49 @@
 import argparse
 import logging
 import os
+import psutil
 import sys
 import time
 import yaml
 import shutil
+import torch
+import pprint
+
 from dataclasses import dataclass, asdict
 from typing import List, Callable
 from git import Repo
-
-import torch
 from torch import nn
 
-from src.model.trainer import Trainer
+import index as index
+from src.trainer.trainer import Trainer
 from src.model.enc_dec import EncoderDecoder
 from src.tokenizer.tokenizer import Tokenizer
-from constants.constants import PROJECT_ROOT, DATASET_PATHS, RUNS_PATH, TRAINING_CONFIG_PATH
-from constants.data_index import DATASET_INDEX
+from constants import PROJECT_ROOT, DATASET_DIRS, RUNS_PATH, TRAIN_CONFIGS_PATH
 
 from scripts.evaluate import evaluate_model, load_tokenizer, load_eval_pairs
-from utils import get_best_device, load_config
+from utils import get_best_device, load_config, resolve, namespace_to_dict
 
-# TODO Claude told me to add this to reduce compute. Figure out what it does
-torch.set_float32_matmul_precision("high")  # TF32 for fp32 matmuls
-torch.backends.cudnn.allow_tf32 = True       # harmless here (no convs), but standard
+torch.set_float32_matmul_precision("high")
+torch.backends.cudnn.allow_tf32 = True
 
 device = get_best_device()
 
 RUN_DIR = None
-CONFIG_FILEPATH = None
 
-def make_run_dir(config) -> str:
+def make_run_dir(name) -> str:
     """Create a unique run directory under runs/, appending a counter when the name is taken."""
     counter = 1
     while True:
-        run_dir = os.path.join(RUNS_PATH, f"{config.run_name}-{counter}")
+        run_dir = os.path.join(RUNS_PATH, f"{name}-{counter}")
         if not os.path.exists(run_dir):
             break
         counter += 1
     os.makedirs(run_dir)
     return run_dir
 
-def get_run_dir(config):
+def get_run_dir(name):
     if RUN_DIR is None:
-        return make_run_dir(config)
+        return make_run_dir(name)
     else:
         return RUN_DIR
 
@@ -55,39 +55,54 @@ def setup_logging(run_dir: str) -> None:
         handlers=[logging.FileHandler(os.path.join(run_dir, "training.log")), logging.StreamHandler()],
     )
 
-def create_model(
-    config
-) -> torch.nn.Module:
-    """Create and configure the EncoderDecoder model."""
+def create_model(config) -> torch.nn.Module:
     logger = logging.getLogger(__name__)
 
-    model = EncoderDecoder(config)
-    logger.info(
-        f"Created EncoderDecoder model with {config.n_layer} layers/stack, "
-        f"{config.n_embd} embedding dim, {config.n_head} heads"
-    )
+    logger.info("Initializing model")
+    model = index.MODEL_INDEX[config.model.name](config.model)
     param_count = sum(p.numel() for p in model.parameters())
     logger.info(f"Model created with {param_count:,} parameters")
     return model
 
+def create_trainer(config) -> Trainer:
+    pass
+
+def create_dataset(config) -> torch.utils.data.Dataset:
+    logger = logging.getLogger(__name__)
+    logger.info("Loading dataset")
+    ds = index.DATASET_INDEX[config.dataset]("train")
+    logger.info(f"Created training dataset with {len(ds)} samples")
+    return ds
+
+def create_optimizer(config) -> torch.optim.Optimizer:
+    logger = logging.getLogger(__name__)
+    logger.info("Initializing optimizer")
+
+
+def create_scheduler(config, optimizer) -> torch.optim.lr_scheduler.LRScheduler:
+    logger = logging.getLogger(__name__)
+    logger.info("Initializing scheduler")
+    scheduler = index.SCHEDULER_INDEX[config.scheduler.name](config, optimizer)
+    logger.info("Initializing scheduler")
+    return scheduler
+
 def create_save_function(config) -> Callable:
     def save_checkpoint(trainer, announce=True):
         run_dir = get_run_dir(config)
-        checkpoint_path = os.path.join(run_dir, config.checkpoint_dir)
-        os.makedirs(checkpoint_path, exist_ok=True)
+        out_path = os.path.join(run_dir, config.checkpoint_dir)
+        os.makedirs(out_path, exist_ok=True)
 
         torch.save(
             {
                 "model_state_dict": trainer.model.state_dict(),
                 "optimizer_state_dict": trainer.optimizer.state_dict(),
-                "epoch": trainer.epoch,
-                "config": config
+                "epoch": trainer.epoch
             },
-            os.path.join(checkpoint_path, f"checkpoint_epoch_{trainer.epoch}_iter_{trainer.iter_num}.pt"),
+            os.path.join(out_path, f"checkpoint_epoch_{trainer.epoch}_iter_{trainer.iter_num}.pt"),
         )
         
         if announce:
-            logging.info(f"Checkpoint saved to {checkpoint_path}")
+            logging.info(f"Checkpoint saved to {out_path}")
 
     return save_checkpoint
 
@@ -124,63 +139,101 @@ def create_log_function(config) -> Callable:
 
 def train_model(
     config,
-    model: torch.nn.Module
+    model: torch.nn.Module,
+    trainer: Trainer,
+    dataset: torch.utils.data.Dataset,
+    schedueler: torch.optim.lr_scheduler.LRScheduler,
+    optimizer: torch.optim.Optimizer
 ) -> tuple:
-    """Train the model with the given configuration."""
     logger = logging.getLogger(__name__)
     logger.info("Starting training...")
 
     config.device = device
 
-    # Create dataset
-    logger.info("Loading dataset")
-    train_ds = DATASET_INDEX[config.dataset]("train", config.block_size)
-    logger.info(f"Created training dataset with {len(train_ds)} samples")
-
-    # Create logging + per-epoch validation functions
     log_fn = create_log_function(config)
     save_fn = create_save_function(config)
 
-    # Create trainer with logging + validation hooks
-    trainer = Trainer(config, model, train_ds, log_fn=log_fn, save_fn=save_fn)
-
-    # Start training
-    trainer.run()
+    trainer.run(
+        config=config,
+        model=model,
+        trainer=trainer,
+        dataset=dataset,
+        schedueler=schedueler,
+        optimizer=optimizer,
+        log_fn=log_fn,
+        save_fn=save_fn
+    )
 
     logger.info("Training completed!")
     return model, trainer
 
-def load_config_from_args():
-    """Load configuration from command line arguments."""
-    parser = argparse.ArgumentParser(description="Train transformer model")
-    parser.add_argument("--config", type=str, help="Name of training run config file")
-    args = parser.parse_args()
+def load_config_from_args(x: str):
+    attempts = [
+        x, 
+        os.path.join(TRAIN_CONFIGS_PATH, x),
+        os.path.join(PROJECT_ROOT, x)
+    ]
+    config_filepath = resolve(x, attempts)
 
-    # load the training config file
-    global CONFIG_FILEPATH
-    CONFIG_FILEPATH = os.path.join(TRAINING_CONFIG_PATH, f"{args.config}")
-    config = load_config(CONFIG_FILEPATH)
+    if config_filepath is None:
+        raise FileNotFoundError(f"The train config files '{attempts}' does not exist.")
+    if os.path.splitext(config_filepath)[1] is not ".yaml":
+        raise FileNotFoundError(f"{config_filepath} is not a .yaml")
+        
+    return load_config(config_filepath)
 
-    # load vocab_size from the tokenizer associated with the dataset specified by the training config file
-    config.vocab_size = Tokenizer.load(os.path.join(DATASET_PATHS[config.dataset], "tokenizer.model")).vocab_size()
+def load_config_from_run(run_dir: str):
+    if not os.path.isdir(run_dir):
+        raise FileNotFoundError(f"The run dir '{run_dir}' does not exist.")
+    if not os.path.isfile(os.path.join(run_dir, "train_config.yaml")):
+        raise FileNotFoundError(f"Run dir '{run_dir}' does not contain \"train_config.yaml\"")
+    
+    return load_config(os.path.join(run_dir, "train_config.yaml"))
 
-    # load block_size from the config file associated with the dataset specified by the training config file 
-    ds_conf_path = os.path.join(DATASET_PATHS[config.dataset], "config.yaml")
-    ds_conf = load_config(ds_conf_path)
-    config.block_size = ds_conf.block_size
+def resolve_run_dir_from_args(x: str):
+    attempts = [
+        x,
+        os.path.join(RUNS_PATH, x)
+    ]
+    run_dir = resolve(x, attempts, isfile=False)
 
-    return config
+    if run_dir is None:
+        raise FileNotFoundError(f"The run dirs '{attempts}' does not exist.")
+    
+    return run_dir
 
 def main():
     """Main training function."""
-    config = load_config_from_args()
+    parser = argparse.ArgumentParser(description="Train transformer model")
+    parser.add_argument("run_name", type=str, required=True, help="Name of the output directory")
+    parser.add_argument("--train_config", type=str, default=None, help="Name of train config file")
+    parser.add_argument("--run_dir", type=str, default=None, help="Name of run directory to restart training from")
+    args = parser.parse_args()
 
-    global RUN_DIR
-    RUN_DIR = get_run_dir(config)
+    if args.run_dir is None:
+        global RUN_DIR
+        RUN_DIR = get_run_dir(args.run_name)
 
-    # copy config file to run dir
-    shutil.copy(CONFIG_FILEPATH, os.path.join(RUN_DIR, "train_config.yaml"))
-    shutil.copy(os.path.join(DATASET_PATHS[config.dataset], "tokenizer.model"), os.path.join(RUN_DIR, "tokenizer.model"))
+        config = load_config_from_args(args.train_config)
+        
+        model = create_model(config)
+        trainer = create_trainer(config)
+        dataset = create_dataset(config)
+        optimizer = create_optimizer(config)
+        scheduler = create_scheduler(config, optimizer)
+    else:
+        global RUN_DIR
+        RUN_DIR = resolve_run_dir_from_args(args.run_dir)
+
+        if args.train_config is None:
+            config = load_config_from_run(RUN_DIR)
+        else:
+            config = load_config_from_args(args.train_config)
+
+    # copy config file and tokenizer model to run dir
+    with open(os.path.join(RUN_DIR, "train_config.yaml"), "w") as fout:
+        yaml.dump(vars(config), fout, default_flow_style=False)
+    shutil.copy(os.path.join(DATASET_DIRS[config.dataset], "tokenizer.model"), os.path.join(RUN_DIR, "tokenizer.model"))
 
     # Setup
     setup_logging(RUN_DIR)
@@ -193,18 +246,11 @@ def main():
 
     # Load configuration
     logger.info(f"Training configuration loaded")
-    logger.info(f"Config file name: {config.run_name}")
-    logger.info(f"Dataset: {config.dataset}")
-    logger.info(f"Learning rate: {config.learning_rate}")
-    logger.info(f"Batch size: {config.batch_size}")
-    logger.info(f"Max epochs: {config.max_epochs}")
+    logger.info(f"Config:\n{pprint.pformat(namespace_to_dict(config))}")
     logger.info(f"Using device: {device}")
 
     try:
-        model = create_model(config)
-
-        model, trainer = train_model(config, model)
-
+        train_model(config, model, trainer, dataset, scheduler, optimizer)
         logger.info("Training script completed successfully!")
 
     except Exception as e:

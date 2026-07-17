@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Sampler
 from torch.nn.utils.rnn import pad_sequence
 
-from constants.constants import PAD_TOKEN
+from constants import PAD_TOKEN
 
 
 class BucketBatchSampler(Sampler):

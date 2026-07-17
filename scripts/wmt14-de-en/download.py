@@ -2,7 +2,7 @@ import os
 import shutil
 from datasets import load_dataset
 
-from constants.constants import WMT14_RAW_DIR
+from constants import WMT14_RAW_DIR
 
 ds = load_dataset("wmt/wmt14", "de-en")
 

@@ -9,7 +9,7 @@ from jaxtyping import Float, Int
 
 from src.model.encoder import Encoder
 from src.model.decoder import Decoder
-from constants.constants import PAD_TOKEN, BOS_TOKEN, EOS_TOKEN
+from constants import PAD_TOKEN, BOS_TOKEN, EOS_TOKEN
 
 class EncoderDecoder(nn.Module):
     def __init__(self, config):

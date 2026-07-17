@@ -1,0 +1,35 @@
+#====================Model Config====================#
+model: 
+  name: "enc-dec"
+  n_layer: 8
+  n_embd: 512
+  n_head: 8
+  hidden_pdrop: 0.1
+  attn_pdrop: 0.1
+
+#====================Train Script Config====================#
+trainer: 
+  name: "default"
+  max_epochs: 5
+  learning_rate: 0.0001
+  batch_size: 256
+  log_interval: 100
+  num_workers: 4
+  compile: True
+  grad_norm_clip: 1.0
+  amp_dtype: "bf16"
+
+dataset: "wmt14-de-en-tokens"
+
+scheduler: 
+  name: "sequential-lr"
+  warmup_epochs: 3
+  start_factor: 0.1
+  end_factor: 1.0
+
+optimizer: 
+  name: "adamw"
+  betas: [0.9, 0.95]
+  weight_decay: 0.01
+
+metrics: ["bleu", "accuracy"]

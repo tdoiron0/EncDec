@@ -4,7 +4,7 @@ import yaml
 import torch
 from types import SimpleNamespace
 
-from constants.constants import PROJECT_ROOT, JESC_PROC_PATH, JESC_RAW_DIR, PREPROCESS_CONFIG_PATH
+from constants import PROJECT_ROOT, JESC_TOK_DIR, JESC_RAW_DIR, PREPROCESS_CONFIG_PATH
 from src.tokenizer.tokenizer import Tokenizer
 
 def load_config(filename):
@@ -55,7 +55,7 @@ def tokenize_dataset(config) -> int:
             "src_offsets": torch.tensor(src_offsets, dtype=torch.int64),
             "tgt_offsets": torch.tensor(tgt_offsets, dtype=torch.int64)
         }
-        torch.save(pairs, os.path.join(JESC_PROC_PATH, f"{split}.pt"))
+        torch.save(pairs, os.path.join(JESC_TOK_DIR, f"{split}.pt"))
 
     return block_size
 
@@ -68,7 +68,7 @@ def main():
 
     config = load_config(args.config)
     print(f"Loaded config file: {args.config}")
-    os.makedirs(JESC_PROC_PATH, exist_ok=True)
+    os.makedirs(JESC_TOK_DIR, exist_ok=True)
 
     block_size = tokenize_dataset(config)
     print(f"block_size (max sequence length across all splits): {block_size}")
@@ -76,7 +76,7 @@ def main():
     with open(os.path.join(PREPROCESS_CONFIG_PATH, args.config), "r") as f:
         config_raw = yaml.safe_load(f)
     config_raw["block_size"] = block_size
-    with open(os.path.join(JESC_PROC_PATH, "config.yaml"), "w") as f:
+    with open(os.path.join(JESC_TOK_DIR, "config.yaml"), "w") as f:
         yaml.dump(config_raw, f, allow_unicode=True)
 
 if __name__ == "__main__":
