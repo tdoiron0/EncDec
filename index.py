@@ -24,8 +24,15 @@ DATASET_INDEX: dict[str, torch.utils.data.Dataset] = {
     c.WMT14_TOK_NAME: WMT14Dataset
 }
 
-OPTIMIZER_INDEX: dict[str, Optimizer] = {
-    c.ADAMW_NAME: torch.optim.AdamW
+def init_adamw(config, model: torch.nn.Module) -> torch.optim.AdamW:
+    return torch.optim.AdamW(
+        params=model.get_train_params(),
+        lr=config.trainer.learning_rate,
+        betas=tuple(config.trainer.betas)
+    )
+
+OPTIMIZER_INDEX: dict[str, Callable[[Any, torch.nn.Module], Optimizer]] = {
+    c.ADAMW_NAME: init_adamw
 }
 
 def init_sequential_lr(config, optimizer) -> SequentialLR:

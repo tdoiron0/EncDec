@@ -74,16 +74,18 @@ def create_dataset(config) -> torch.utils.data.Dataset:
     logger.info(f"Created training dataset with {len(ds)} samples")
     return ds
 
-def create_optimizer(config) -> torch.optim.Optimizer:
+def create_optimizer(config, model) -> torch.optim.Optimizer:
     logger = logging.getLogger(__name__)
     logger.info("Initializing optimizer")
-
+    optimizer = index.OPTIMIZER_INDEX[config.optimizer.name](config, model)
+    logger.info(f"Initialized optimizer {config.optimizer.name}")
+    return optimizer
 
 def create_scheduler(config, optimizer) -> torch.optim.lr_scheduler.LRScheduler:
     logger = logging.getLogger(__name__)
-    logger.info("Initializing scheduler")
+    logger.info(f"Initializing scheduler")
     scheduler = index.SCHEDULER_INDEX[config.scheduler.name](config, optimizer)
-    logger.info("Initializing scheduler")
+    logger.info(f"Initialized scheduler {config.scheduler.name}")
     return scheduler
 
 def create_save_function(config) -> Callable:
@@ -107,7 +109,6 @@ def create_save_function(config) -> Callable:
     return save_checkpoint
 
 def create_log_function(config) -> Callable:
-    """Create the logging function for training progress."""
     logger = logging.getLogger(__name__)
 
     def log_training_progress(trainer):
@@ -117,10 +118,10 @@ def create_log_function(config) -> Callable:
                 f"epoch={trainer.epoch}: "
                 f"{trainer.samps}/{trainer.total_samps} samps "
                 f"({trainer.rate:.2f} samp/sec) | "
-                f"train loss {trainer.loss.item():.5f} | "
+                f"train loss: {trainer.loss.item():.5f} | "
                 f"time remaining: {time_left:.2f} min | "
-                f"alloc {torch.cuda.max_memory_allocated()/1e9:.2f} GB | "
-                f"reserved {torch.cuda.memory_reserved()/1e9:.2f} GB"
+                f"alloc: {torch.cuda.max_memory_allocated()/1e9:.2f} GB | "
+                f"reserved: {torch.cuda.memory_reserved()/1e9:.2f} GB"
             )
             torch.cuda.reset_peak_memory_stats()
         else:
@@ -128,11 +129,9 @@ def create_log_function(config) -> Callable:
                 f"epoch={trainer.epoch}: "
                 f"{trainer.samps}/{trainer.total_samps} samps "
                 f"({trainer.rate:.2f} samp/sec) | "
-                f"train loss {trainer.loss.item():.5f} | "
-                f"time remaining {time_left:.2f} min | "
-                f"pad waste {trainer.pad_waste}"
+                f"train loss: {trainer.loss.item():.5f} | "
+                f"time remaining: {time_left:.2f} min"
             )
-
         logger.info(message)
 
     return log_training_progress
