@@ -30,22 +30,8 @@ device = get_best_device()
 
 RUN_DIR = None
 
-def make_run_dir(name) -> str:
-    """Create a unique run directory under runs/, appending a counter when the name is taken."""
-    counter = 1
-    while True:
-        run_dir = os.path.join(RUNS_PATH, f"{name}-{counter}")
-        if not os.path.exists(run_dir):
-            break
-        counter += 1
-    os.makedirs(run_dir)
-    return run_dir
-
-def get_run_dir(name):
-    if RUN_DIR is None:
-        return make_run_dir(name)
-    else:
-        return RUN_DIR
+def run_name_taken(name) -> bool:
+    return os.path.exists(os.path.join(RUNS_PATH, name))
 
 def setup_logging(run_dir: str) -> None:
     """Configure logging for training."""
@@ -90,7 +76,8 @@ def create_scheduler(config, optimizer) -> torch.optim.lr_scheduler.LRScheduler:
 
 def create_save_function(config) -> Callable:
     def save_checkpoint(trainer, announce=True):
-        run_dir = get_run_dir(config)
+        global RUN_DIR
+        run_dir = RUN_DIR
         out_path = os.path.join(run_dir, config.checkpoint_dir)
         os.makedirs(out_path, exist_ok=True)
 
@@ -173,6 +160,7 @@ def load_config_from_args(x: str):
         os.path.join(PROJECT_ROOT, x)
     ]
     config_filepath = resolve(x, attempts)
+    shutil.copy()
 
     if config_filepath is None:
         raise FileNotFoundError(f"The train config files '{attempts}' does not exist.")
@@ -204,14 +192,16 @@ def resolve_run_dir_from_args(x: str):
 def main():
     """Main training function."""
     parser = argparse.ArgumentParser(description="Train transformer model")
-    parser.add_argument("run_name", type=str, required=True, help="Name of the output directory")
+    parser.add_argument("--run_name", type=str, default=None, help="Name of the output directory")
     parser.add_argument("--train_config", type=str, default=None, help="Name of train config file")
     parser.add_argument("--run_dir", type=str, default=None, help="Name of run directory to restart training from")
     args = parser.parse_args()
 
     if args.run_dir is None:
+        if run_name_taken(args.run_name):
+            raise ValueError(f"The run name {args.run_name} is already taken")
         global RUN_DIR
-        RUN_DIR = get_run_dir(args.run_name)
+        RUN_DIR = os.path.join(RUNS_PATH, args.run_name)
 
         config = load_config_from_args(args.train_config)
         
