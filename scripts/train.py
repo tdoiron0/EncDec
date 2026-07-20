@@ -208,7 +208,7 @@ def main():
         model = create_model(config)
         trainer = create_trainer(config)
         dataset = create_dataset(config)
-        optimizer = create_optimizer(config)
+        optimizer = create_optimizer(config, model)
         scheduler = create_scheduler(config, optimizer)
     else:
         global RUN_DIR
