@@ -20,20 +20,14 @@ def load_config_from_args():
     # load the training config file
     global CONFIG_FILEPATH
     CONFIG_FILEPATH = os.path.join(TRAIN_CONFIGS_PATH, f"{args.config}")
-    config = load_config(CONFIG_FILEPATH)
-
-    # load vocab_size from the tokenizer associated with the dataset specified by the training config file
-    config.vocab_size = Tokenizer.load(os.path.join(DATASET_DIRS[config.dataset], "tokenizer.model")).vocab_size()
-
-    # load block_size from the config file associated with the dataset specified by the training config file 
-    ds_conf_path = os.path.join(DATASET_DIRS[config.dataset], "config.yaml")
-    ds_conf = load_config(ds_conf_path)
-    config.block_size = ds_conf.block_size
+    return load_config(CONFIG_FILEPATH)
 
 def create_model(
     config
 ) -> torch.nn.Module:
-    model = EncoderDecoder(config)
+    # the model resolves vocab_size from the dataset's tokenizer
+    config.model.dataset = config.dataset
+    model = EncoderDecoder(config.model)
     return model
 
 def main():

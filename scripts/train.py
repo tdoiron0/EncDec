@@ -45,13 +45,27 @@ def create_model(config) -> torch.nn.Module:
     logger = logging.getLogger(__name__)
 
     logger.info("Initializing model")
+    # the model resolves vocab_size from the dataset's tokenizer, so it needs
+    # to know which dataset it is being trained on
+    config.model.dataset = config.dataset
     model = index.MODEL_INDEX[config.model.name](config.model)
+
+    freeze_patterns = getattr(config.trainer, "freeze", None) or []
+    if freeze_patterns:
+        frozen = model.freeze_parameters(freeze_patterns)
+        logger.info(f"Froze {len(frozen)} parameter tensors matching {freeze_patterns}")
+
     param_count = sum(p.numel() for p in model.parameters())
-    logger.info(f"Model created with {param_count:,} parameters")
+    trainable_count = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.info(f"Model created with {param_count:,} parameters ({trainable_count:,} trainable)")
     return model
 
 def create_trainer(config) -> Trainer:
-    pass
+    logger = logging.getLogger(__name__)
+    logger.info("Initializing trainer")
+    trainer = index.TRAINER_INDEX[config.trainer.name]()
+    logger.info(f"Created trainer {config.trainer.name}")
+    return trainer
 
 def create_dataset(config) -> torch.utils.data.Dataset:
     logger = logging.getLogger(__name__)
@@ -99,8 +113,8 @@ def create_log_function(config) -> Callable:
     logger = logging.getLogger(__name__)
 
     def log_training_progress(trainer):
-        time_left = (((trainer.total_samps*config.max_epochs) - (trainer.samps + trainer.total_samps*trainer.epoch)) / trainer.rate) / 60
-        if config.device == "cuda":
+        time_left = (((trainer.total_samps*config.trainer.max_epochs) - (trainer.samps + trainer.total_samps*trainer.epoch)) / trainer.rate) / 60
+        if device == "cuda":
             message = (
                 f"epoch={trainer.epoch}: "
                 f"{trainer.samps}/{trainer.total_samps} samps "
@@ -140,11 +154,10 @@ def train_model(
     save_fn = create_save_function(config)
 
     trainer.run(
-        config=config,
+        config=config.trainer,
         model=model,
-        trainer=trainer,
-        dataset=dataset,
-        schedueler=schedueler,
+        train_dataset=dataset,
+        scheduler=schedueler,
         optimizer=optimizer,
         log_fn=log_fn,
         save_fn=save_fn
@@ -160,14 +173,13 @@ def load_config_from_args(x: str):
         os.path.join(PROJECT_ROOT, x)
     ]
     config_filepath = resolve(x, attempts)
-    shutil.copy()
 
     if config_filepath is None:
         raise FileNotFoundError(f"The train config files '{attempts}' does not exist.")
-    if os.path.splitext(config_filepath)[1] is not ".yaml":
+    if os.path.splitext(config_filepath)[1] != ".yaml":
         raise FileNotFoundError(f"{config_filepath} is not a .yaml")
         
-    return load_config(config_filepath)
+    return config_filepath, load_config(config_filepath)
 
 def load_config_from_run(run_dir: str):
     if not os.path.isdir(run_dir):
@@ -175,7 +187,7 @@ def load_config_from_run(run_dir: str):
     if not os.path.isfile(os.path.join(run_dir, "train_config.yaml")):
         raise FileNotFoundError(f"Run dir '{run_dir}' does not contain \"train_config.yaml\"")
     
-    return load_config(os.path.join(run_dir, "train_config.yaml"))
+    return os.path.join(run_dir, "train_config.yaml"), load_config(os.path.join(run_dir, "train_config.yaml"))
 
 def resolve_run_dir_from_args(x: str):
     attempts = [
@@ -189,45 +201,52 @@ def resolve_run_dir_from_args(x: str):
     
     return run_dir
 
+def load_tokenizer_from_config(config) -> Tokenizer:
+    dataset_dir = DATASET_DIRS[config.dataset]
+    tokenizer_filepath = os.path.join(dataset_dir, "tokenizer.model")
+    tokenizer = Tokenizer.load(tokenizer_filepath)
+    return tokenizer
+
 def main():
     """Main training function."""
     parser = argparse.ArgumentParser(description="Train transformer model")
     parser.add_argument("--run_name", type=str, default=None, help="Name of the output directory")
-    parser.add_argument("--train_config", type=str, default=None, help="Name of train config file")
+    parser.add_argument("--config", type=str, default=None, help="Name of train config file")
     parser.add_argument("--run_dir", type=str, default=None, help="Name of run directory to restart training from")
     args = parser.parse_args()
+
+    global RUN_DIR
 
     if args.run_dir is None:
         if run_name_taken(args.run_name):
             raise ValueError(f"The run name {args.run_name} is already taken")
-        global RUN_DIR
         RUN_DIR = os.path.join(RUNS_PATH, args.run_name)
+        os.mkdir(RUN_DIR)
+        setup_logging(RUN_DIR)
 
-        config = load_config_from_args(args.train_config)
-        
+        config_filepath, config = load_config_from_args(args.config)
+
         model = create_model(config)
         trainer = create_trainer(config)
         dataset = create_dataset(config)
         optimizer = create_optimizer(config, model)
         scheduler = create_scheduler(config, optimizer)
     else:
-        global RUN_DIR
         RUN_DIR = resolve_run_dir_from_args(args.run_dir)
+        setup_logging(RUN_DIR)
 
-        if args.train_config is None:
-            config = load_config_from_run(RUN_DIR)
+        if args.config is None:
+            config_filepath, config = load_config_from_run(RUN_DIR)
         else:
-            config = load_config_from_args(args.train_config)
+            config_filepath, config = load_config_from_args(args.config)
 
     # copy config file and tokenizer model to run dir
-    with open(os.path.join(RUN_DIR, "train_config.yaml"), "w") as fout:
-        yaml.dump(vars(config), fout, default_flow_style=False)
+    shutil.copy(config_filepath, os.path.join(RUN_DIR, "train_config.yaml"))
     shutil.copy(os.path.join(DATASET_DIRS[config.dataset], "tokenizer.model"), os.path.join(RUN_DIR, "tokenizer.model"))
 
     # Setup
-    setup_logging(RUN_DIR)
     logger = logging.getLogger(__name__)
-    logger.info("Starting transformer training script")
+    logger.info("Starting training script")
 
     repo = Repo(search_parent_directories=True)
     git_hash = repo.head.object.hexsha

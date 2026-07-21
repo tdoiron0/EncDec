@@ -1,9 +1,9 @@
 #====================Model Config====================#
 model: 
   name: "enc-dec"
-  n_layer: 8
-  n_embd: 512
-  n_head: 8
+  n_layer: 1
+  n_embd: 8
+  n_head: 1
   hidden_pdrop: 0.1
   attn_pdrop: 0.1
 
@@ -12,7 +12,7 @@ trainer:
   name: "default"
   max_epochs: 5
   learning_rate: 0.0001
-  batch_size: 256
+  batch_size: 1
   log_interval: 100
   num_workers: 4
   compile: True

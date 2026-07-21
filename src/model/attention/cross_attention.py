@@ -19,7 +19,7 @@ class CrossAttention(nn.Module):
 
         self.q_proj = nn.Linear(self.n_embd, self.n_embd)
         self.kv_proj = nn.Linear(self.n_embd, 2 * self.n_embd)
-        self.out_proj = nn.Linear(config.n_embd, config.n_embd)
+        self.out_proj = nn.Linear(self.n_embd, self.n_embd)
 
         self.dropout_p = config.attn_pdrop
 

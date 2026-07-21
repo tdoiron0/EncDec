@@ -1,4 +1,5 @@
 import math
+import os
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -9,13 +10,19 @@ from jaxtyping import Float, Int
 
 from src.model.encoder import Encoder
 from src.model.decoder import Decoder
-from constants import PAD_TOKEN, BOS_TOKEN, EOS_TOKEN
+from src.tokenizer.tokenizer import Tokenizer
+from constants import PAD_TOKEN, BOS_TOKEN, EOS_TOKEN, DATASET_DIRS
 
 class EncoderDecoder(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.block_size = config.block_size
+        # resolve vocab_size from the dataset's tokenizer before building the
+        # submodules, since Embedding and lm_head read it off the config
+        dataset_dir = DATASET_DIRS[config.dataset]
+        tokenizer_filepath = os.path.join(dataset_dir, "tokenizer.model")
+        tokenizer = Tokenizer.load(tokenizer_filepath)
+        config.vocab_size = tokenizer.vocab_size()
 
         self.encoder = Encoder(config)
         self.decoder = Decoder(config)
@@ -41,6 +48,25 @@ class EncoderDecoder(nn.Module):
             torch.nn.init.ones_(module.weight)
             torch.nn.init.zeros_(module.bias)
 
+    def freeze_parameters(self, patterns: list) -> list:
+        """Freeze every parameter whose dotted name starts with one of ``patterns``.
+
+        Prefix match against ``named_parameters()`` names, e.g. ``"encoder."``
+        freezes the whole encoder and ``"decoder.blocks.0."`` a single block.
+        A pattern that matches nothing is almost always a typo, so it raises
+        rather than silently training everything. Returns the frozen names.
+        """
+        params = dict(self.named_parameters())
+        frozen = set()
+        for pattern in patterns:
+            matched = [n for n in params if n.startswith(pattern)]
+            if not matched:
+                raise ValueError(f"Freeze pattern {pattern!r} matched no parameters")
+            frozen.update(matched)
+        for name in frozen:
+            params[name].requires_grad = False
+        return sorted(frozen)
+
     def configure_optimizers(self, weight_decay: float) -> list:
         """Split parameters into weight-decay / no-decay groups (GPT-2 convention).
 
@@ -48,6 +74,8 @@ class EncoderDecoder(nn.Module):
         embedding tables are not. Iterating with ``recurse=False`` visits each
         parameter exactly once at its owning leaf module, so every parameter is
         classified without the brittle set-completeness assertions minGPT uses.
+        Parameters frozen via ``freeze_parameters`` are excluded from both groups
+        so the optimizer never allocates state (or applies decay) to them.
         """
         decay, no_decay = set(), set()
         for module_name, module in self.named_modules():
@@ -60,10 +88,12 @@ class EncoderDecoder(nn.Module):
                 else:
                     decay.add(full_name)
 
-        param_dict = dict(self.named_parameters())
+        param_dict = {n: p for n, p in self.named_parameters() if p.requires_grad}
+        if not param_dict:
+            raise ValueError("All parameters are frozen; nothing to optimize")
         return [
-            {"params": [param_dict[n] for n in sorted(decay)], "weight_decay": weight_decay},
-            {"params": [param_dict[n] for n in sorted(no_decay)], "weight_decay": 0.0},
+            {"params": [param_dict[n] for n in sorted(decay) if n in param_dict], "weight_decay": weight_decay},
+            {"params": [param_dict[n] for n in sorted(no_decay) if n in param_dict], "weight_decay": 0.0},
         ]
 
     def get_attention_mask(
@@ -78,7 +108,7 @@ class EncoderDecoder(nn.Module):
         :returns attention_mask: mask of shape (batch, 1, max_tokens, max_tokens)
         """
         B = num_tokens.shape[0]
-        max_tokens = min(self.block_size, num_tokens.max().item())
+        max_tokens = num_tokens.max().item()
 
         # padding mask: key position j is valid when j < num_tokens[b]  -> (B, max_tokens)
         pad_mask = (
@@ -148,8 +178,7 @@ class EncoderDecoder(nn.Module):
         prefix (no KV cache). All beams start from BOS and grow in lockstep; a beam
         that emits ``eos_id`` is frozen (extended with PAD at zero cost) so its
         score stays comparable while the rest keep searching. Search ends when all
-        beams have finished, after ``max_new_tokens`` steps, or when the target
-        fills the model's block size.
+        beams have finished or after ``max_new_tokens`` steps.
 
         ``beam_width == 1`` is greedy decoding. ``temperature > 0`` softens the
         logits before scoring (selection stays deterministic top-k). The final
@@ -181,7 +210,7 @@ class EncoderDecoder(nn.Module):
         finished = torch.zeros(beam_width, dtype=torch.bool, device=device)
 
         for _ in range(max_new_tokens):
-            if finished.all() or beams.size(1) >= self.block_size:
+            if finished.all():
                 break
 
             t = beams.size(1)

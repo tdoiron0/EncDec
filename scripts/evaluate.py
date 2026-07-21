@@ -12,7 +12,7 @@ from sacrebleu.metrics import BLEU, CHRF
 
 from src.model.enc_dec import EncoderDecoder
 from src.tokenizer.tokenizer import Tokenizer
-from constants import PROJECT_ROOT, PAD_TOKEN
+from constants import PROJECT_ROOT
 from index import DATASET_INDEX
 
 from utils import get_best_device, load_config
@@ -94,7 +94,7 @@ def build_model_from_checkpoint(checkpoint: dict) -> torch.nn.Module:
     logger.info(
         f"Built EncoderDecoder: {model_config.n_layer} layers/stack, "
         f"{model_config.n_embd} embd dim, {model_config.n_head} heads, "
-        f"vocab {model_config.vocab_size}, block {model_config.block_size} "
+        f"vocab {model_config.vocab_size} "
         f"({param_count:,} params)"
     )
     return model
@@ -110,38 +110,24 @@ def load_tokenizer(run_dir: str) -> Tokenizer:
     return Tokenizer.load(model_path)
 
 
-def _strip_padding(seq: torch.Tensor) -> List[int]:
-    """Drop the trailing PAD the Dataset appends to reach block_size.
-
-    PAD is the tokenizer's reserved pad id, so it never appears inside real
-    content — only as right-padding — and removing it recovers the original
-    unpadded sequence.
-    """
-    ids = seq.tolist()
-    while ids and ids[-1] == PAD_TOKEN:
-        ids.pop()
-    return ids
-
-
 def load_eval_pairs(
-    dataset_name: str, split: str, block_size: int
+    dataset_name: str, split: str
 ) -> List[Tuple[List[int], List[int]]]:
     """Load the raw (src_ids, tgt_ids) pairs for a split via DATASET_INDEX.
 
     The dataset registered for this checkpoint owns how splits are read from
     disk, so it is instantiated through DATASET_INDEX rather than reloading the
-    .pt by hand. It returns src/tgt padded to block_size; evaluation needs the
-    source and target kept apart and unpadded — the source is the generation
-    prompt and the target is the reference — so the padding is stripped here.
+    .pt by hand. The dataset returns unpadded (src, tgt) tensors; the source is
+    the generation prompt and the target is the reference.
     """
     logger = logging.getLogger(__name__)
     if dataset_name not in DATASET_INDEX:
         raise KeyError(
             f"Dataset '{dataset_name}' not in DATASET_INDEX; cannot load splits."
         )
-    dataset = DATASET_INDEX[dataset_name](split, block_size)
+    dataset = DATASET_INDEX[dataset_name](split)
     pairs = [
-        (_strip_padding(src), _strip_padding(tgt))
+        (src.tolist(), tgt.tolist())
         for src, tgt in (dataset[i] for i in range(len(dataset)))
     ]
     logger.info(f"Loaded {len(pairs)} pairs from '{split}' split")
@@ -185,7 +171,7 @@ def translate(
 
 @torch.no_grad()
 def teacher_forced_loss(
-    model: EncoderDecoder, src: List[int], tgt: List[int], block_size: int
+    model: EncoderDecoder, src: List[int], tgt: List[int]
 ) -> Tuple[float, int]:
     """Teacher-forced cross-entropy on the target, summed and token-weighted.
 
@@ -194,8 +180,6 @@ def teacher_forced_loss(
     supervised on L-1 positions — the decoder input drops the final token — so the
     averaged loss is reweighted by that count for a corpus-level perplexity.
     """
-    src = src[:block_size]
-    tgt = tgt[: block_size + 1]
     n_tokens = max(len(tgt) - 1, 0)
     if n_tokens == 0:
         return 0.0, 0
@@ -228,7 +212,7 @@ def evaluate_model(
     start = time.time()
     for i, (src, tgt) in enumerate(pairs, start=1):
         # Teacher-forced loss (the training objective) -> perplexity.
-        loss_sum, n_tok = teacher_forced_loss(model, src, tgt, model.block_size)
+        loss_sum, n_tok = teacher_forced_loss(model, src, tgt)
         total_loss += loss_sum
         total_tokens += n_tok
 
@@ -347,7 +331,7 @@ def main() -> None:
         sp = load_tokenizer(run_dir)
         eos_id = sp.eos_id()
 
-        pairs = load_eval_pairs(dataset_name, args.split, model.block_size)
+        pairs = load_eval_pairs(dataset_name, args.split)
         if args.max_eval_samples and args.max_eval_samples < len(pairs):
             pairs = pairs[: args.max_eval_samples]
             logger.info(f"Capped evaluation to {len(pairs)} samples")

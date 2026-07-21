@@ -7,7 +7,7 @@ name = "encdec"
 version = "0.1.0"
 
 [tool.setuptools]
-py-modules = ["utils"]
+py-modules = ["utils", "index", "constants"]
 
 [tool.setuptools.packages.find]
 where = ["."]

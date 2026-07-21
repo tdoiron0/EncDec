@@ -26,9 +26,9 @@ DATASET_INDEX: dict[str, torch.utils.data.Dataset] = {
 
 def init_adamw(config, model: torch.nn.Module) -> torch.optim.AdamW:
     return torch.optim.AdamW(
-        params=model.get_train_params(),
+        params=model.configure_optimizers(config.optimizer.weight_decay),
         lr=config.trainer.learning_rate,
-        betas=tuple(config.trainer.betas)
+        betas=tuple(config.optimizer.betas)
     )
 
 OPTIMIZER_INDEX: dict[str, Callable[[Any, torch.nn.Module], Optimizer]] = {
@@ -56,9 +56,4 @@ def init_sequential_lr(config, optimizer) -> SequentialLR:
 
 SCHEDULER_INDEX: dict[str, Callable[[Any, Optimizer], LRScheduler]] = {
     c.SEQUENTIAL_LR_SCHEDULER_NAME: init_sequential_lr
-}
-
-DTYPE_INDEX: dict[str, torch.dtype] = {
-    c.FLOAT16: torch.float16,
-    c.BFLOAT16: torch.bfloat16,
 }

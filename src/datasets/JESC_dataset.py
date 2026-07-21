@@ -2,7 +2,7 @@ from torch.utils.data import Dataset
 import torch
 import sys, os
 
-from constants import JESC_TOK_DIR, PAD_TOKEN
+from constants import JESC_TOK_DIR
 
 class JESCDataset(Dataset):
     """Prefix-LM dataset for Japanese -> English translation.
@@ -19,10 +19,9 @@ class JESCDataset(Dataset):
 
     DATA_DIR = JESC_TOK_DIR
 
-    def __init__(self, split: str, block_size: int):
+    def __init__(self, split: str):
         assert split in {"train", "val", "test"}
         self.split = split
-        self.block_size = block_size  # must match the model's config.block_size
         self.pairs: dict[str, torch.Tensor] = torch.load(os.path.join(self.DATA_DIR, f"{split}.pt"))
 
     def __len__(self):
@@ -37,12 +36,5 @@ class JESCDataset(Dataset):
         src = self.pairs.get("src")[src_start:src_end]
         tgt = self.pairs.get("tgt")[tgt_start:tgt_end]
 
-        src_pad_length = self.block_size - len(src)
-        tgt_pad_length = self.block_size - len(tgt)
-        src_pad = torch.full((src_pad_length,), fill_value=PAD_TOKEN)
-        tgt_pad = torch.full((tgt_pad_length,), fill_value=PAD_TOKEN)
-
-        src = torch.cat((src, src_pad))
-        tgt = torch.cat((tgt, tgt_pad))
-
+        # variable length; the DataLoader's pad_collate pads to the batch max
         return src.long(), tgt.long()

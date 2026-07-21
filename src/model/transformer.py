@@ -15,7 +15,6 @@ class TransformerConfig:
     """Configuration for transformer models."""
 
     vocab_size: int = 10
-    block_size: int = 10
     n_layer: int = 2
     n_embd: int = 4
     n_head: int = 2
@@ -25,7 +24,6 @@ class TransformerConfig:
 class GenericTransformer(nn.Module):
     def __init__(self, config: TransformerConfig):
         super().__init__()
-        self.block_size = config.block_size
         self.vocab_size = config.vocab_size
 
         self.transformer = nn.ModuleDict(
@@ -128,7 +126,7 @@ class GenericTransformer(nn.Module):
         :returns attention_mask: Attention mask of shape (batch, 1, max_tokens, max_tokens)
         """
         B = num_tokens.shape[0]
-        max_tokens = min(self.block_size, num_tokens.max().item())
+        max_tokens = num_tokens.max().item()
         return torch.ones((B, 1, max_tokens, max_tokens), dtype=torch.int)
 
     def forward(

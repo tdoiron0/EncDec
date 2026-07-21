@@ -39,8 +39,9 @@ class BucketBatchSampler(Sampler):
 def pad_collate(batch):
     """Pad (src, tgt) pairs to the longest sequence in the batch.
 
-    Replaces the default collate so batches are ``(B, batch_max_len)`` instead
-    of ``(B, block_size)``; the model already trims/masks by PAD_TOKEN.
+    The datasets return variable-length sequences, so this replaces the default
+    collate to produce ``(B, batch_max_len)`` tensors; the model already
+    trims/masks by PAD_TOKEN.
     """
     srcs, tgts = zip(*batch)
     src = pad_sequence(srcs, batch_first=True, padding_value=PAD_TOKEN)

@@ -4,7 +4,7 @@ from typing import Type, Callable
 
 '''====================GENERAL PROJECT STRUCTURE===================='''
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR))
 RUNS_PATH = os.path.join(PROJECT_ROOT, "runs")
 CONFIG_PATH = os.path.join(PROJECT_ROOT, "config")
 
@@ -19,6 +19,10 @@ PREPROCESS_CONFIG_PATH = os.path.join(CONFIG_PATH, "preprocess")
 '''====================TOKENIZERS===================='''
 TOKENIZERS_PATH = os.path.join(PROJECT_ROOT, "tokenizers")
 CORPORA_PATH = os.path.join(TOKENIZERS_PATH, "corpora")
+
+BOS_TOKEN = 1
+EOS_TOKEN = 2
+PAD_TOKEN = 3
 
 '''====================MODELS===================='''
 ENC_DEC_NAME = "enc-dec"
@@ -57,3 +61,8 @@ ADAMW_NAME = "adamw"
 '''====================DATATYPES===================='''
 FLOAT16 = "fp16"
 BFLOAT16 = "bf16"
+
+DTYPE_INDEX: dict[str, torch.dtype] = {
+    FLOAT16: torch.float16,
+    BFLOAT16: torch.bfloat16,
+}

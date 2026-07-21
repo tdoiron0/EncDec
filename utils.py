@@ -76,14 +76,12 @@ def namespace_to_dict(obj):
     
 def resolve(x: str, attempts: list[str], isfile: bool = True) -> str:
     if isfile:
-        filepath = None
         for it in attempts:
             if os.path.isfile(it):
-                return filepath
+                return it
         return None
     else:
-        dir = None
         for it in attempts:
             if os.path.isdir(it):
-                return dir
+                return it
         return None
