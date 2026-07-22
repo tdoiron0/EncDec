@@ -213,15 +213,20 @@ def main():
     parser.add_argument("--run_name", type=str, default=None, help="Name of the output directory")
     parser.add_argument("--config", type=str, default=None, help="Name of train config file")
     parser.add_argument("--run_dir", type=str, default=None, help="Name of run directory to restart training from")
+    parser.add_argument("-o", action="store_true", help="If run name already taken, delete it and make a new one")
     args = parser.parse_args()
 
     global RUN_DIR
 
     if args.run_dir is None:
         if run_name_taken(args.run_name):
-            raise ValueError(f"The run name {args.run_name} is already taken")
+            if args.o:
+                shutil.rmtree(os.path.join(RUNS_PATH, args.run_name))
+            else:
+                raise ValueError(f"The run name {args.run_name} is already taken")
+            
         RUN_DIR = os.path.join(RUNS_PATH, args.run_name)
-        os.mkdir(RUN_DIR)
+        os.makedirs(RUN_DIR, exist_ok=True)
         setup_logging(RUN_DIR)
 
         config_filepath, config = load_config_from_args(args.config)

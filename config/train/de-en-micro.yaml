@@ -15,7 +15,7 @@ trainer:
   batch_size: 1
   log_interval: 100
   num_workers: 4
-  compile: True
+  compile: False
   grad_norm_clip: 1.0
   amp_dtype: "bf16"
   freeze: []
